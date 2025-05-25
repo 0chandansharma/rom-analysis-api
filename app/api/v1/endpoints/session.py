@@ -22,4 +22,4 @@ async def clear_session(
 ):
     """Clear session data"""
     await session_manager.clear_session(session_id)
-    return {"message": "Session cleared"}
+    return {"message": "Session cleared", "session_id": session_id}

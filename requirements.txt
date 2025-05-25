@@ -1,31 +1,59 @@
-# Core dependencies
+# ===== SPORTS2D EXACT REQUIREMENTS =====
+# From Sports2D pyproject.toml dependencies
+toml
+numpy>=1.19
+matplotlib
+PyQt5
+tqdm
+anytree
+pandas>=1.5
+scipy
+statsmodels
+ipython
+c3d
+rtmlib
+openvino
+opencv-python
+imageio_ffmpeg
+deep-sort-realtime
+Pose2Sim
+
+# ===== ADDITIONAL FOR ROM ANALYSIS API =====
+# Web Framework
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
+websockets==12.0
+
+# API Requirements
 pydantic==2.5.0
 pydantic-settings==2.1.0
 python-multipart==0.0.6
 
-# Computer Vision
-opencv-python-headless==4.8.1.78
-numpy==1.24.3
-Pillow==10.1.0
-
-# Pose Detection
-rtmlib==0.0.9
-onnxruntime-gpu==1.16.3  # Use onnxruntime if no GPU
+# Cloud Deployment & Performance
+onnxruntime==1.16.3  # Use onnxruntime-gpu==1.16.3 for GPU
 torch==2.1.0  # For GPU detection
+torchvision  # Required by deep-sort-realtime
 
-# Storage
-redis==5.0.1  # Optional, for production
+# Storage & Caching
+redis==5.0.1
 aioredis==2.0.1
 
-# Testing
+# Image Processing (in addition to opencv-python)
+Pillow==10.1.0
+opencv-python-headless==4.8.1.78  # Headless version for cloud
+
+# Development & Testing
 pytest==7.4.3
 pytest-asyncio==0.21.1
 httpx==0.25.2
-
-# Development
 python-dotenv==1.0.0
 black==23.11.0
 flake8==6.1.0
 mypy==1.7.0
+
+# Logging & Monitoring
+python-json-logger==2.0.7
+
+# Optional for production
+gunicorn==21.2.0
+prometheus-fastapi-instrumentator==6.1.0

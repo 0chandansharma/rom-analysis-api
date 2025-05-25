@@ -1,6 +1,9 @@
+# ===== app/core/body_parts/lower_back/rotation.py =====
 import numpy as np
 from typing import Dict, List, Tuple
 from app.core.body_parts.base import Movement
+from physiotrack_core.angle_computation import add_virtual_keypoints
+from physiotrack_core.rom_calculations import calculate_lower_back_rotation as calc_rotation
 
 class LowerBackRotation(Movement):
     """Lower back rotation analyzer"""
@@ -23,38 +26,15 @@ class LowerBackRotation(Movement):
     
     def calculate_angles(self, keypoints: Dict[str, np.ndarray]) -> Dict[str, float]:
         """Calculate rotation angle based on shoulder and hip alignment"""
-        angles = {}
-        
-        # Calculate rotation based on shoulder-hip alignment
-        if all(k in keypoints for k in self.required_keypoints):
-            # Shoulder line vector
-            shoulder_vector = keypoints["RShoulder"] - keypoints["LShoulder"]
-            shoulder_angle = np.degrees(np.arctan2(shoulder_vector[1], shoulder_vector[0]))
-            
-            # Hip line vector
-            hip_vector = keypoints["RHip"] - keypoints["LHip"]
-            hip_angle = np.degrees(np.arctan2(hip_vector[1], hip_vector[0]))
-            
-            # Rotation is difference between shoulder and hip angles
-            rotation_angle = shoulder_angle - hip_angle
-            
-            # Normalize to [-180, 180]
-            if rotation_angle > 180:
-                rotation_angle -= 360
-            elif rotation_angle < -180:
-                rotation_angle += 360
-            
-            angles["trunk_rotation"] = rotation_angle
-            angles["shoulder_line"] = shoulder_angle
-            angles["hip_line"] = hip_angle
-        
-        return angles
+        keypoints = add_virtual_keypoints(keypoints)
+        return calc_rotation(keypoints)
     
     def validate_position(self, keypoints: Dict[str, np.ndarray]) -> Tuple[bool, str]:
         """Validate position for rotation measurement"""
-        valid, message = super().validate_position(keypoints)
-        if not valid:
-            return valid, message
+        # Basic validation
+        missing = [k for k in self.required_keypoints if k not in keypoints]
+        if missing:
+            return False, f"Cannot detect: {', '.join(missing)}"
         
         # Check if person is reasonably upright
         if all(k in keypoints for k in ["Neck", "Hip"]):

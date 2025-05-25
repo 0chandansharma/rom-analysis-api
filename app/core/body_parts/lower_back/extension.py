@@ -1,7 +1,9 @@
+# ===== app/core/body_parts/lower_back/extension.py =====
 import numpy as np
 from typing import Dict, List, Tuple
 from app.core.body_parts.base import Movement
-from physiotrack_core.angle_computation import calculate_angle_between_points
+from physiotrack_core.angle_computation import add_virtual_keypoints
+from physiotrack_core.rom_calculations import calculate_lower_back_extension as calc_extension
 
 class LowerBackExtension(Movement):
     """Lower back extension movement analyzer"""
@@ -12,7 +14,9 @@ class LowerBackExtension(Movement):
     
     @property
     def required_keypoints(self) -> List[str]:
-        return ["Neck", "Hip", "LHip", "RHip", "LShoulder", "RShoulder"]
+        base = ["Neck", "Hip", "LHip", "RHip"]
+        virtual = ["LShoulder", "RShoulder"]
+        return base + virtual
     
     @property
     def primary_angle(self) -> str:
@@ -24,34 +28,23 @@ class LowerBackExtension(Movement):
     
     def calculate_angles(self, keypoints: Dict[str, np.ndarray]) -> Dict[str, float]:
         """Calculate trunk and pelvis angles for extension"""
-        angles = {}
-        
-        # Calculate trunk angle
-        if all(k in keypoints for k in ["Neck", "Hip"]):
-            trunk_angle = calculate_angle_between_points(
-                keypoints["Neck"], 
-                keypoints["Hip"],
-                reference="vertical"
-            )
-            # Transform for extension (angle - 180)
-            angles["trunk"] = trunk_angle - 180
-        
-        # Calculate pelvis angle
-        if all(k in keypoints for k in ["LHip", "RHip"]):
-            pelvis_angle = calculate_angle_between_points(
-                keypoints["LHip"],
-                keypoints["RHip"],
-                reference="horizontal"
-            )
-            angles["pelvis"] = pelvis_angle
-        
-        return angles
+        keypoints = add_virtual_keypoints(keypoints)
+        return calc_extension(keypoints)
     
     def validate_position(self, keypoints: Dict[str, np.ndarray]) -> Tuple[bool, str]:
         """Validate position for extension measurement"""
-        valid, message = super().validate_position(keypoints)
-        if not valid:
-            return valid, message
+        # Basic validation
+        missing = [k for k in self.required_keypoints if k not in keypoints]
+        if missing:
+            return False, f"Cannot detect: {', '.join(missing)}"
+        
+        # Check if person is facing camera
+        if all(k in keypoints for k in ["LShoulder", "RShoulder"]):
+            shoulder_width = np.linalg.norm(
+                keypoints["LShoulder"] - keypoints["RShoulder"]
+            )
+            if shoulder_width < 50:
+                return False, "Please face the camera directly"
         
         # Additional check for extension: trunk should be relatively upright
         if "trunk" in self.calculate_angles(keypoints):
@@ -60,3 +53,5 @@ class LowerBackExtension(Movement):
                 return False, "Please stand upright before extending"
         
         return True, "Position is correct"
+
+

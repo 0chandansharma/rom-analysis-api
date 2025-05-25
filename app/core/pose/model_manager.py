@@ -20,10 +20,15 @@ class ModelManager:
                     from app.core.pose.processor import PoseProcessor
                     
                     # Create instance to load model
-                    _ = PoseProcessor()
+                    processor = PoseProcessor()
                     
-                    cls._initialized = True
-                    logger.info("Pose detection model initialized successfully")
+                    # Verify it's initialized
+                    if processor.is_initialized:
+                        cls._initialized = True
+                        logger.info("Pose detection model initialized successfully")
+                    else:
+                        raise RuntimeError("PoseProcessor failed to initialize")
+                        
                 except Exception as e:
                     logger.error(f"Failed to initialize pose model: {e}")
                     raise

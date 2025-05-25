@@ -11,10 +11,6 @@ import sys
 import asyncio
 import websockets
 import numpy as np
-import logging
-
-# Configure logging to see errors
-logging.basicConfig(level=logging.INFO)
 
 # API Configuration
 API_BASE_URL = "http://localhost:8000/api/v1"
@@ -46,16 +42,13 @@ def test_health_check():
     """Test health check endpoint"""
     print("\n=== Testing Health Check ===")
     
-    try:
-        response = requests.get(f"{API_BASE_URL}/health/")
-        print(f"Status Code: {response.status_code}")
-        print(f"Response: {json.dumps(response.json(), indent=2)}")
-        
-        # Test readiness
-        response = requests.get(f"{API_BASE_URL}/health/ready")
-        print(f"\nReadiness Check: {json.dumps(response.json(), indent=2)}")
-    except Exception as e:
-        print(f"✗ Health check failed: {e}")
+    response = requests.get(f"{API_BASE_URL}/health/")
+    print(f"Status Code: {response.status_code}")
+    print(f"Response: {json.dumps(response.json(), indent=2)}")
+    
+    # Test readiness
+    response = requests.get(f"{API_BASE_URL}/health/ready")
+    print(f"\nReadiness Check: {json.dumps(response.json(), indent=2)}")
 
 def test_rom_analysis(image_path: str = None):
     """Test the ROM analysis API"""
@@ -125,8 +118,8 @@ def test_rom_analysis(image_path: str = None):
                 result = response.json()
                 print(f"✓ Success!")
                 print(f"  Pose Detected: {result['pose_detected']}")
+                print(f"  Confidence: {result['pose_confidence']:.2%}")
                 if result['pose_detected']:
-                    print(f"  Confidence: {result['pose_confidence']:.2%}")
                     print(f"  Angles: {json.dumps(result['angles'], indent=4)}")
                     print(f"  ROM: {json.dumps(result['rom'], indent=4)}")
                     print(f"  Validation: {result['validation']['message']}")
@@ -146,29 +139,20 @@ def test_session_management():
     
     session_id = "test_session_001"
     
-    try:
-        # Get session data
-        print(f"\nGetting session data for {session_id}...")
-        response = requests.get(f"{API_BASE_URL}/sessions/session/{session_id}")
-        
-        if response.status_code == 200:
-            session_data = response.json()
-            print(f"Session Data: {json.dumps(session_data, indent=2)}")
-        elif response.status_code == 404:
-            print(f"No session data found (expected for new session)")
-        else:
-            print(f"Unexpected status: {response.status_code}")
-        
-        # Clear session
-        print(f"\nClearing session {session_id}...")
-        response = requests.delete(f"{API_BASE_URL}/sessions/session/{session_id}")
-        if response.status_code == 200:
-            print(f"Response: {response.json()}")
-        else:
-            print(f"Clear session failed with status: {response.status_code}")
-            
-    except Exception as e:
-        print(f"✗ Session management test failed: {e}")
+    # Get session data
+    print(f"\nGetting session data for {session_id}...")
+    response = requests.get(f"{API_BASE_URL}/sessions/session/{session_id}")
+    
+    if response.status_code == 200:
+        session_data = response.json()
+        print(f"Session Data: {json.dumps(session_data, indent=2)}")
+    else:
+        print(f"No session data found (status: {response.status_code})")
+    
+    # Clear session
+    print(f"\nClearing session {session_id}...")
+    response = requests.delete(f"{API_BASE_URL}/sessions/session/{session_id}")
+    print(f"Response: {response.json()}")
 
 async def test_websocket():
     """Test WebSocket connection for real-time analysis"""
@@ -202,20 +186,17 @@ async def test_websocket():
             result = json.loads(response)
             
             print(f"Received response:")
-            if "error" in result:
-                print(f"  Error: {result['error']}")
+            print(f"  Pose Detected: {result.get('pose_detected', False)}")
+            if result.get('pose_detected'):
+                print(f"  Angles: {result.get('angles', {})}")
+                print(f"  ROM: {result.get('rom', {})}")
             else:
-                print(f"  Pose Detected: {result.get('pose_detected', False)}")
-                if result.get('pose_detected'):
-                    print(f"  Angles: {result.get('angles', {})}")
-                    print(f"  ROM: {result.get('rom', {})}")
-                else:
-                    print(f"  Message: {result.get('message', 'No message')}")
+                print(f"  Message: {result.get('message', 'No message')}")
             
-            print("WebSocket test completed!")
+            print("WebSocket test completed successfully!")
             
     except Exception as e:
-        print(f"✗ WebSocket test failed: {e}")
+        print(f"WebSocket test failed: {e}")
 
 async def test_websocket_stream():
     """Test WebSocket streaming for continuous analysis"""
@@ -259,15 +240,12 @@ async def test_websocket_stream():
                     # Receive analysis result
                     response = await websocket.recv()
                     result = json.loads(response)
-                    if "error" in result:
-                        print(f"Frame {i}: Error - {result['error']}")
-                    else:
-                        print(f"Frame {i}: ROM = {result.get('rom', {}).get('current', 0)}°")
+                    print(f"Frame {i}: ROM = {result.get('rom', {}).get('current', 0)}°")
                 
                 print("Streaming test completed!")
             
     except Exception as e:
-        print(f"✗ Streaming test failed: {e}")
+        print(f"Streaming test failed: {e}")
 
 def main():
     """Run all tests"""
@@ -284,11 +262,8 @@ def main():
     
     # Run async tests
     print("\nRunning WebSocket tests...")
-    try:
-        asyncio.run(test_websocket())
-        asyncio.run(test_websocket_stream())
-    except Exception as e:
-        print(f"✗ Async tests failed: {e}")
+    asyncio.run(test_websocket())
+    asyncio.run(test_websocket_stream())
     
     print("\n" + "=" * 50)
     print("All tests completed!")

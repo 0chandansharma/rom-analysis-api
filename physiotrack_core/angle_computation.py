@@ -1,11 +1,11 @@
 """
-Complete angle computation functions extracted from PhysioTrack
-Includes ALL angle calculation strategies from the original library
+Complete angle computation functions for PhysioTrack
+Includes ALL angle calculation strategies from Sports2D
 """
 import numpy as np
 from typing import Dict, List, Tuple, Optional, Union
 
-# Extract from physiotrack/Utilities/common.py - angle_dict
+# Complete angle definitions from 
 ANGLE_DEFINITIONS = {
     # Joint angles
     'right ankle': {
@@ -180,6 +180,31 @@ ANGLE_DEFINITIONS = {
     }
 }
 
+def calculate_angle_between_points(p1: np.ndarray, p2: np.ndarray, reference: str = "vertical") -> float:
+    """
+    Calculate angle between two points relative to reference
+    
+    Args:
+        p1: First point (start)
+        p2: Second point (end)
+        reference: "vertical" or "horizontal"
+    
+    Returns:
+        Angle in degrees
+    """
+    vector = p2 - p1
+    
+    if reference == "vertical":
+        # Angle from vertical axis (positive Y points down)
+        angle = np.degrees(np.arctan2(vector[0], -vector[1]))
+    elif reference == "horizontal":
+        # Angle from horizontal axis
+        angle = np.degrees(np.arctan2(vector[1], vector[0]))
+    else:
+        raise ValueError(f"Unknown reference: {reference}")
+    
+    return float(angle)
+
 def points_to_angles(points_list: List[np.ndarray]) -> float:
     """
     Original PhysioTrack angle calculation
@@ -340,3 +365,19 @@ def mean_angles(angles_list: List[float]) -> float:
     mean_angle = np.degrees(np.arctan2(mean_sin, mean_cos))
     
     return float(mean_angle)
+
+def add_virtual_keypoints(keypoints: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
+    """
+    Add computed keypoints like Neck and Hip if not present
+    """
+    keypoints = keypoints.copy()
+    
+    # Add Neck if not present
+    if 'Neck' not in keypoints and all(k in keypoints for k in ['LShoulder', 'RShoulder']):
+        keypoints['Neck'] = (keypoints['LShoulder'] + keypoints['RShoulder']) / 2
+    
+    # Add Hip if not present
+    if 'Hip' not in keypoints and all(k in keypoints for k in ['LHip', 'RHip']):
+        keypoints['Hip'] = (keypoints['LHip'] + keypoints['RHip']) / 2
+    
+    return keypoints
