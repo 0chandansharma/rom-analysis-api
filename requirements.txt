@@ -1,5 +1,5 @@
-# ===== SPORTS2D EXACT REQUIREMENTS =====
-# From Sports2D pyproject.toml dependencies
+# =====  EXACT REQUIREMENTS =====
+# From pyproject.toml dependencies
 toml
 numpy>=1.19
 matplotlib

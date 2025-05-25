@@ -1,6 +1,6 @@
 """
 Complete angle computation functions for PhysioTrack
-Includes ALL angle calculation strategies from Sports2D
+Includes ALL angle calculation strategies from
 """
 import numpy as np
 from typing import Dict, List, Tuple, Optional, Union

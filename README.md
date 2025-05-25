@@ -306,7 +306,7 @@ This project is licensed under the BSD 3-Clause License.
 ## Acknowledgments
 
 - RTMLib for pose detection models
-- Sports2D for angle calculation algorithms
+- for angle calculation algorithms
 - FastAPI for the excellent web framework
 
 python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-level debug

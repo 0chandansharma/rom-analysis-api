@@ -33,7 +33,7 @@ class ShoulderFlexion(Movement):
         if not all(kp in keypoints for kp in self.required_keypoints):
             return angles
         
-        # Calculate shoulder angle using Sports2D method
+        # Calculate shoulder angle using method
         shoulder_angle = compute_angle('right shoulder', keypoints, flip_left_right=False)
         if not np.isnan(shoulder_angle):
             angles["shoulder"] = shoulder_angle

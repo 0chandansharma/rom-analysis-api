@@ -33,12 +33,12 @@ class ElbowFlexion(Movement):
         if not all(kp in keypoints for kp in self.required_keypoints):
             return angles
         
-        # Calculate elbow angle using Sports2D method
+        # Calculate elbow angle using  method
         elbow_angle_raw = compute_angle('right elbow', keypoints, flip_left_right=False)
         
         if not np.isnan(elbow_angle_raw):
             # Convert to flexion angle (0° = full extension, 145° = full flexion)
-            # Sports2D uses offset of 180 and scale of -1 for elbow
+            # uses offset of 180 and scale of -1 for elbow
             elbow_flexion = 180 - elbow_angle_raw
             angles["elbow"] = max(0, min(180, elbow_flexion))  # Clamp to reasonable range
             
