@@ -98,6 +98,14 @@
             font-size: 36px;
             color: #1976d2;
         }
+        .error-display {
+            background: #ffebee;
+            color: #c62828;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -113,6 +121,7 @@
     </div>
     
     <div id="status" class="status disconnected">Disconnected</div>
+    <div id="errorDisplay" class="error-display"></div>
     
     <div class="container">
         <div class="panel">
@@ -186,11 +195,22 @@
                 log('Camera initialized', 'info');
             } catch (err) {
                 log('Failed to access camera: ' + err.message, 'error');
+                showError('Camera access denied. Please allow camera access to use this feature.');
             }
         }
         
+        function showError(message) {
+            const errorDisplay = document.getElementById('errorDisplay');
+            errorDisplay.textContent = message;
+            errorDisplay.style.display = 'block';
+            setTimeout(() => {
+                errorDisplay.style.display = 'none';
+            }, 5000);
+        }
+        
         function connectWebSocket() {
-            const wsUrl = `ws://localhost:8000/api/v1/ws/${sessionId}`;
+            // Use the correct WebSocket URL (no /api/v1 prefix)
+            const wsUrl = `ws://localhost:8000/ws/${sessionId}`;
             log(`Connecting to ${wsUrl}...`, 'info');
             
             try {
@@ -208,6 +228,20 @@
                 ws.onmessage = (event) => {
                     try {
                         const data = JSON.parse(event.data);
+                        
+                        // Check for errors
+                        if (data.status === 'error' || data.error) {
+                            log('Error: ' + (data.error || 'Unknown error'), 'error');
+                            showError(data.error || 'Analysis error occurred');
+                            return;
+                        }
+                        
+                        // Check for ping
+                        if (data.type === 'ping') {
+                            log('Received ping', 'info');
+                            return;
+                        }
+                        
                         log('Received: ' + JSON.stringify(data).substring(0, 200) + '...', 'received');
                         
                         // Update ROM display
@@ -215,10 +249,13 @@
                             document.getElementById('romValue').textContent = data.rom.current.toFixed(1) + '°';
                             document.getElementById('romRange').textContent = 
                                 `Range: ${data.rom.min.toFixed(1)}° to ${data.rom.max.toFixed(1)}°`;
+                        } else if (!data.pose_detected) {
+                            document.getElementById('romValue').textContent = '--°';
+                            document.getElementById('romRange').textContent = 'No pose detected';
                         }
                         
                         // Show validation message
-                        if (data.validation) {
+                        if (data.validation && data.validation.message) {
                             log('Validation: ' + data.validation.message, 'info');
                         }
                     } catch (err) {
@@ -227,7 +264,8 @@
                 };
                 
                 ws.onerror = (error) => {
-                    log('WebSocket error: ' + error, 'error');
+                    log('WebSocket error occurred', 'error');
+                    showError('WebSocket connection error');
                 };
                 
                 ws.onclose = () => {
@@ -242,6 +280,7 @@
                 };
             } catch (err) {
                 log('Failed to connect: ' + err.message, 'error');
+                showError('Failed to connect to WebSocket server');
             }
         }
         
@@ -261,23 +300,29 @@
         function sendSingleFrame() {
             if (!ws || ws.readyState !== WebSocket.OPEN) {
                 log('WebSocket not connected', 'error');
+                showError('WebSocket is not connected');
                 return;
             }
             
-            const frame = captureFrame();
-            const bodyPart = document.getElementById('bodyPart').value;
-            const movement = document.getElementById('movement').value;
-            const includeKeypoints = document.getElementById('includeKeypoints').checked;
-            
-            const message = {
-                frame_base64: frame,
-                body_part: bodyPart,
-                movement_type: movement,
-                include_keypoints: includeKeypoints
-            };
-            
-            log('Sending single frame...', 'sent');
-            ws.send(JSON.stringify(message));
+            try {
+                const frame = captureFrame();
+                const bodyPart = document.getElementById('bodyPart').value;
+                const movement = document.getElementById('movement').value;
+                const includeKeypoints = document.getElementById('includeKeypoints').checked;
+                
+                const message = {
+                    frame_base64: frame,
+                    body_part: bodyPart,
+                    movement_type: movement,
+                    include_keypoints: includeKeypoints
+                };
+                
+                log('Sending single frame...', 'sent');
+                ws.send(JSON.stringify(message));
+            } catch (err) {
+                log('Failed to send frame: ' + err.message, 'error');
+                showError('Failed to capture or send frame');
+            }
         }
         
         function startStreaming() {
@@ -289,10 +334,30 @@
             
             log('Starting continuous streaming...', 'info');
             
+            let frameCount = 0;
+            let lastFrameTime = Date.now();
+            
             // Send frames every 100ms (10 FPS)
             streamInterval = setInterval(() => {
                 if (ws && ws.readyState === WebSocket.OPEN) {
-                    sendSingleFrame();
+                    try {
+                        sendSingleFrame();
+                        frameCount++;
+                        
+                        // Log FPS every second
+                        const now = Date.now();
+                        if (now - lastFrameTime >= 1000) {
+                            log(`Streaming at ${frameCount} FPS`, 'info');
+                            frameCount = 0;
+                            lastFrameTime = now;
+                        }
+                    } catch (err) {
+                        log('Streaming error: ' + err.message, 'error');
+                        stopStreaming();
+                    }
+                } else {
+                    log('WebSocket not ready, stopping stream', 'error');
+                    stopStreaming();
                 }
             }, 100);
         }
@@ -350,6 +415,7 @@
         // Initialize camera on page load
         window.onload = () => {
             initCamera();
+            log('Page loaded, camera initialization attempted', 'info');
         };
     </script>
 </body>

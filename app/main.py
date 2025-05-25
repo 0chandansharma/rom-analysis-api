@@ -52,6 +52,10 @@ app.add_middleware(
 # Include routers
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
+# Import and mount WebSocket routes directly (without prefix)
+from app.api.v1.endpoints.websocket import router as websocket_router
+app.include_router(websocket_router, tags=["websocket"])
+
 # Root endpoint
 @app.get("/")
 async def root():
