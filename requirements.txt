@@ -1,0 +1,31 @@
+# Core dependencies
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+pydantic-settings==2.1.0
+python-multipart==0.0.6
+
+# Computer Vision
+opencv-python-headless==4.8.1.78
+numpy==1.24.3
+Pillow==10.1.0
+
+# Pose Detection
+rtmlib==0.0.9
+onnxruntime-gpu==1.16.3  # Use onnxruntime if no GPU
+torch==2.1.0  # For GPU detection
+
+# Storage
+redis==5.0.1  # Optional, for production
+aioredis==2.0.1
+
+# Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+httpx==0.25.2
+
+# Development
+python-dotenv==1.0.0
+black==23.11.0
+flake8==6.1.0
+mypy==1.7.0
