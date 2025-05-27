@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Debug</title>
+</head>
+<body>
+    <h1>WebSocket Frame Debug</h1>
+    <video id="video" width="640" height="480" autoplay></video>
+    <canvas id="canvas" width="640" height="480" style="border: 1px solid black;"></canvas>
+    <br>
+    <button onclick="connect()">Connect</button>
+    <button onclick="sendFrame()">Send Frame</button>
+    <button onclick="startStream()">Start Stream</button>
+    <button onclick="stopStream()">Stop Stream</button>
+    <pre id="output"></pre>
+
+    <script>
+        let ws = null;
+        let streamInterval = null;
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const output = document.getElementById('output');
+
+        // Initialize camera
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                video.srcObject = stream;
+                video.onloadedmetadata = () => {
+                    console.log('Video dimensions:', video.videoWidth, 'x', video.videoHeight);
+                };
+            })
+            .catch(err => console.error('Camera error:', err));
+
+        function connect() {
+            ws = new WebSocket('ws://localhost:8000/ws/debug_session');
+            
+            ws.onopen = () => {
+                output.textContent = 'Connected\n';
+            };
+            
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                output.textContent = JSON.stringify(data, null, 2);
+                
+                // Draw on canvas if pose detected
+                if (data.pose_detected && data.keypoints) {
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    
+                    // Draw keypoints
+                    Object.entries(data.keypoints).forEach(([name, point]) => {
+                        ctx.fillStyle = 'red';
+                        ctx.beginPath();
+                        ctx.arc(point.x, point.y, 5, 0, 2 * Math.PI);
+                        ctx.fill();
+                        
+                        ctx.fillStyle = 'white';
+                        ctx.fillText(name, point.x + 5, point.y - 5);
+                    });
+                }
+            };
+            
+            ws.onerror = (error) => {
+                output.textContent = 'Error: ' + error + '\n';
+            };
+        }
+
+        function sendFrame() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                alert('Not connected');
+                return;
+            }
+
+            // Draw video to canvas
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            // Check if canvas has data
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const hasData = imageData.data.some(pixel => pixel !== 0);
+            console.log('Canvas has data:', hasData);
+            
+            // Convert to base64
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+            const base64 = dataUrl.split(',')[1];
+            
+            console.log('Sending frame, base64 length:', base64.length);
+            
+            const message = {
+                frame_base64: base64,
+                body_part: 'lower_back',
+                movement_type: 'flexion',
+                include_keypoints: true
+            };
+            
+            ws.send(JSON.stringify(message));
+        }
+
+        function startStream() {
+            streamInterval = setInterval(sendFrame, 100);
+        }
+
+        function stopStream() {
+            if (streamInterval) {
+                clearInterval(streamInterval);
+                streamInterval = null;
+            }
+        }
+    </script>
+</body>
+</html>
